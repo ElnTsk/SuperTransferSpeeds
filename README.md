@@ -20,8 +20,8 @@ the files go straight from you to them.
 - **Resumable.** Interrupted downloads continue where they stopped. If you
   stop a receive yourself (Ctrl-C or closing the window), the partial files
   are deleted instead.
-- **Windows and Linux.** A Windows `STRS.exe`, a Linux client, and a
-  standalone relay for both.
+- **Windows and Linux.** A Windows `STRS.exe` (the relay is built in), a
+  Linux client, and an optional standalone Linux relay.
 
 ## Quick start
 
@@ -50,8 +50,9 @@ Run `STRS` with no arguments for the menu.
 
 ## Standalone relay
 
-`STRS-Relay.exe` (Windows) and `supertransfer-relay` (Linux) run the relay on
-its own, for a machine that only hosts:
+On Windows the relay is built into `STRS.exe`, so there is nothing else to
+start. `supertransfer-relay` (Linux) runs the relay on its own, for a server
+that only hosts:
 
 ```
 supertransfer-relay -listen :8443 -advertise your.host:8443

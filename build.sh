@@ -21,12 +21,10 @@ fi
 mkdir -p dist
 echo "=== relay (linux) ==="
 go build -trimpath -o dist/supertransfer-relay ./cmd/transferserver
-echo "=== relay (windows) ==="
-GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -ldflags "-s -w" -o dist/STRS-Relay.exe ./cmd/transferserver
 echo "=== client (linux) ==="
 go build -trimpath -o dist/STRS-linux ./cmd/transfer
 echo "=== client (windows) ==="
 GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -ldflags "-s -w -X main.defaultServer=127.0.0.1:8443" -o dist/STRS.exe ./cmd/transfer
 
-( cd dist && sha256sum STRS.exe STRS-Relay.exe STRS-linux supertransfer-relay > SHA256SUMS )
+( cd dist && sha256sum STRS.exe STRS-linux supertransfer-relay > SHA256SUMS )
 echo "done: dist/"
