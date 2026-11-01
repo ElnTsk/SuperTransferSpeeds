@@ -130,7 +130,7 @@ Options: `-streams`, `-ttl`, `-max-sessions`, `-public-port`, `-no-upnp`,
 You need [Go](https://go.dev/dl/) installed.
 
 ```bash
-git clone https://github.com/Slxcky-1/SuperTransferSpeeds.git
+git clone https://github.com/ElnTsk/SuperTransferSpeeds.git
 cd SuperTransferSpeeds
 ./build.sh
 ```
