@@ -101,8 +101,10 @@ Handy options:
 ## Running the relay on its own (optional)
 
 Most people never need this. `supertransfer-relay` is for a Linux server that
-should only host transfers and not send or receive anything itself. It is also
-a single static file that runs on any 64-bit Linux.
+should only host transfers and not send or receive anything itself. It is not
+on the Releases page: build it with `./build.sh` (see "Build it yourself"
+below). The result in `dist/` is a single static file that runs on any 64-bit
+Linux.
 
 ```bash
 chmod +x supertransfer-relay
