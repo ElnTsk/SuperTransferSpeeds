@@ -7,9 +7,10 @@ your friend types that password to download them.
 ## How it works
 
 1. You run STRS and choose **Send Files To A Friend**.
-2. STRS shows you an **address**, a **pin** and a **password**. Send these to
-   your friend.
-3. Your friend runs STRS, chooses **Receive Files**, and types the password.
+2. STRS shows you a short block of text (it holds your address and password).
+   Send that block to your friend in any chat app.
+3. Your friend runs STRS, chooses **Receive Files**, and pastes the block in.
+   If they have used STRS with you before, typing just the password is enough.
 4. The files go from your PC to theirs. Keep your window open until it finishes.
 
 Your PC is the "relay" (the go-between), and STRS starts it for you. There is
@@ -17,11 +18,13 @@ nothing else to install or run.
 
 ## What you get
 
-- **Private:** everything is encrypted, and your friend's copy checks it is
-  really talking to your PC.
+- **Private:** everything is encrypted. The block also holds a "pin", a
+  fingerprint of your PC's certificate, so your friend's copy can tell it is
+  really talking to your PC and not someone pretending to be it.
 - **Fast:** many connections at once, and lots of small files are bundled so
   they don't slow things down.
-- **Safe:** every file is checked after it arrives, so a broken file is caught.
+- **Safe:** every file is checked after it arrives (using a SHA-256 hash, a
+  fingerprint of its contents), so a damaged file is caught and fetched again.
 - **Resumable:** if the connection drops, the download carries on where it
   stopped.
 - **Tidy:** if you stop a download yourself (Ctrl-C or closing the window), the
