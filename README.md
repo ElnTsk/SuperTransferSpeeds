@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/logo-src.jpg" alt="STRS logo" width="220">
+</p>
+
 # SuperTransfer (STRS)
 
 Send big files and folders straight from your PC to a friend's PC.
@@ -131,7 +135,27 @@ cd SuperTransferSpeeds
 ./build.sh
 ```
 
-The programs are written to the `dist/` folder.
+The programs are written to the `dist/` folder. The build also runs the unit
+tests.
+
+## Testing
+
+`tests/e2e.sh` runs real transfers on your own machine (Linux, macOS, WSL or
+Git Bash; needs Go and Python 3). It checks that:
+
+- a normal transfer arrives intact, and a relay never sees the password or
+  readable file data
+- a relay that changes data in transit is caught, even if it also forges the
+  checksum
+- a wrong password delivers nothing
+- packs of small files, empty files and resuming a killed download all work
+
+```bash
+tests/e2e.sh
+```
+
+It uses a temporary folder and removes it afterwards. The hostile relay it
+builds exists only for the test and is never part of a release.
 
 ## How your files are protected
 
