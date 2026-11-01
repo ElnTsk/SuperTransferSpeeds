@@ -44,6 +44,7 @@ type Config struct {
 	PublicPort  int
 	NoUPnP      bool
 	NoFirewall  bool
+	NoDiscovery bool
 	InstallPort string
 }
 
@@ -87,6 +88,10 @@ func (l *lane) stop() {
 }
 
 type session struct {
+	// 64-bit counters used with sync/atomic come first: on 32-bit ARM (a
+	// Raspberry Pi) they must sit on an 8-byte boundary or the program panics.
+	served int64
+
 	h       *hub
 	key     string // sha256 of the shared password, never the password itself
 	id      string // short label for logs
@@ -104,7 +109,6 @@ type session struct {
 	idle     chan *lane
 	workers  map[*wire.Conn]struct{}
 	closed   bool
-	served   int64
 }
 
 // isTerminal tells a double-clicked run apart from one driven by flags or a

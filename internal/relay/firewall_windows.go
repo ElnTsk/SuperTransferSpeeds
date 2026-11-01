@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -18,13 +19,20 @@ func firewallMarker(stateDir string) string { return filepath.Join(stateDir, "fi
 
 func writeFirewallMarker(stateDir, port string) {
 	_ = os.MkdirAll(stateDir, 0o700)
-	_ = os.WriteFile(firewallMarker(stateDir), []byte(port), 0o600)
+	_ = os.WriteFile(firewallMarker(stateDir), []byte(port+"+udp"), 0o600)
 }
 
 func addFirewallRule(port string) error {
 	out, err := exec.Command("netsh", "advfirewall", "firewall", "add", "rule",
 		"name=STRS Relay", "dir=in", "action=allow", "protocol=TCP",
 		"localport="+port, "profile=any").CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("%v: %s", err, strings.TrimSpace(string(out)))
+	}
+	// Receivers on the same network find this relay with a UDP search.
+	out, err = exec.Command("netsh", "advfirewall", "firewall", "add", "rule",
+		"name=STRS Discovery", "dir=in", "action=allow", "protocol=UDP",
+		"localport="+strconv.Itoa(DiscoveryPort), "profile=any").CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("%v: %s", err, strings.TrimSpace(string(out)))
 	}
@@ -58,7 +66,7 @@ func elevateSelf(args string) error {
 // declining leaves the relay working on the LAN only.
 func configureFirewall(port, stateDir string, interactive bool, logf func(string, ...any)) {
 	marker := firewallMarker(stateDir)
-	if b, err := os.ReadFile(marker); err == nil && strings.TrimSpace(string(b)) == port {
+	if b, err := os.ReadFile(marker); err == nil && strings.TrimSpace(string(b)) == port+"+udp" {
 		return
 	}
 	if isElevated() {

@@ -33,14 +33,17 @@ type sendSource struct {
 
 // sender holds the state of one `transfer send` run.
 type sender struct {
+	// 64-bit counters used with sync/atomic come first: on 32-bit ARM (a
+	// Raspberry Pi) they must sit on an 8-byte boundary or the program panics.
+	served int64
+	chunks int64
+
 	control       *wire.Conn
 	serverAddr    string
 	code          string
 	pin           string
 	sources       map[string]*sendSource
 	total         int64
-	served        int64
-	chunks        int64
 	packed        int64
 	started       time.Time
 	peer          string

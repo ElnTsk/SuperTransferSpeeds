@@ -70,6 +70,7 @@ func parseFlags() (relay.Config, string, string) {
 	flag.IntVar(&c.MaxSessions, "max-sessions", 4, "concurrent live sessions")
 	flag.IntVar(&c.PublicPort, "public-port", 0, "external port to forward (default: from config, else 8443)")
 	flag.BoolVar(&c.NoUPnP, "no-upnp", false, "do not ask the router to forward a port")
+	flag.BoolVar(&c.NoDiscovery, "no-discovery", false, "do not answer searches from receivers on the local network")
 	flag.BoolVar(&c.NoFirewall, "no-firewall", false, "do not touch the Windows Firewall")
 	flag.StringVar(&installPort, "install-port", "", "internal: add the firewall rule for this port and exit")
 	flag.StringVar(&logPath, "log", "", "also append the log to this file")

@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	version  = "1.1.0"
+	version  = "1.2.0"
 	appName  = "STRS"
 	fullName = "SuperTransferSpeeds"
 )
@@ -362,6 +362,7 @@ func runMenu() error {
 	fmt.Println()
 	fmt.Println("  1  Send Files To A Friend   (Set A Password, Share It With Them)")
 	fmt.Println("  2  Receive Files            (Receive With Just A Password)")
+	fmt.Println("  3  Receive From Nearby      (Sender Is On Your Network Or This PC, Only The Password)")
 	fmt.Println()
 	choice := strings.TrimSpace(askPlain("Select Choice", "1"))
 	fmt.Println()
@@ -370,6 +371,8 @@ func runMenu() error {
 		return cmdSend(nil)
 	case "2", "receive", "recv", "friend":
 		return cmdFriend(nil)
+	case "3", "nearby", "local", "same", "lan":
+		return cmdReceiveNearby()
 	default:
 		return fmt.Errorf("not a menu option: %s", choice)
 	}

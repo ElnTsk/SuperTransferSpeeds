@@ -20,6 +20,21 @@ your friend types that password to download them.
 Your PC is the "relay" (the go-between), and STRS starts it for you. There is
 nothing else to install or run.
 
+## Sending to someone in the same house
+
+If the other PC is on your own network (the same router or Wi-Fi), they don't
+need an address or a pin. You choose **1 Send Files To A Friend** and give them
+the password. On their PC they choose **3 Receive From Nearby** and type it.
+Their copy finds yours on the network by itself.
+
+It also works between two windows on one computer, which is a handy way to try
+STRS out.
+
+If it can't find the sender, check that both PCs are on the same network and
+that the sender's firewall allows STRS (Windows asks the first time). Some
+guest Wi-Fi networks stop devices from seeing each other. In that case choose
+**2** and paste the block instead.
+
 ## What you get
 
 - **Private:** connections are encrypted, and so are the files themselves
@@ -52,7 +67,8 @@ Your friend needs the same program on their computer.
 ## Windows
 
 1. Download `STRS.exe` and double-click it.
-2. Choose **1** to send or **2** to receive.
+2. Choose **1** to send, **2** to receive from a friend far away, or **3** to
+   receive from someone on your own network.
 
 If Windows asks about the firewall, allow it. That lets your friend connect.
 
@@ -81,6 +97,10 @@ port STRS uses (8443). Only do this if you have a firewall turned on:
 |---|---|
 | Ubuntu / Debian (ufw) | `sudo ufw allow 8443/tcp` |
 | Arch / Fedora (firewalld) | `sudo firewall-cmd --add-port=8443/tcp` |
+
+To let people on your own network find you automatically (option 3), also
+allow the search port, UDP 48443: `sudo ufw allow 48443/udp` or
+`sudo firewall-cmd --add-port=48443/udp`.
 
 ## Sending to someone outside your home
 

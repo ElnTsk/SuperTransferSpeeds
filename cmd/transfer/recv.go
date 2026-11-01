@@ -39,6 +39,11 @@ type displayRow struct {
 
 // receiver holds one receive run.
 type receiver struct {
+	// 64-bit counters used with sync/atomic come first: on 32-bit ARM (a
+	// Raspberry Pi) they must sit on an 8-byte boundary or the program panics.
+	got    int64
+	chunks int64
+
 	password string
 	server   string
 	pin      string
@@ -46,9 +51,7 @@ type receiver struct {
 	outRoot  string
 	state    *dlState
 	streams  []stream
-	got      int64
 	total    int64
-	chunks   int64
 	started  time.Time
 	abort    atomic.Value
 	stopOnce sync.Once
@@ -172,7 +175,7 @@ func cmdReceive(args []string) error {
 	// route to the sender, so demand it rather than dialing into the void.
 	bareEntry := typed == "" && pEndpoint == ""
 	if bareEntry && isLocalHost(hostOf(serverAddr)) {
-		return fmt.Errorf("a password on its own does not say which relay to use - paste the whole block, or choose 3 (friend mode) and it will ask for the address once")
+		return fmt.Errorf("a password on its own does not say which relay to use - paste the whole block, or choose 2 (Receive Files) and it will ask for the address once")
 	}
 	suppliedPin := *pinF
 	if strings.TrimSpace(suppliedPin) == "" {

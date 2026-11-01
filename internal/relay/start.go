@@ -7,6 +7,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -15,7 +16,7 @@ import (
 )
 
 // Version is the relay's build label, reported at startup and in -v.
-const Version = "1.1.0"
+const Version = "1.2.0"
 
 // Start brings the relay up and returns as soon as it is listening, so an
 // embedding program (STRS.exe) can host it without a second window.
@@ -53,6 +54,17 @@ func Start(cfg Config, lg *log.Logger) (*Server, error) {
 	if !cfg.NoFirewall {
 		configureFirewall(port, cfg.State, false, lg.Printf)
 	}
+	var disco net.PacketConn
+	if !cfg.NoDiscovery {
+		if tcpPort, perr := strconv.Atoi(port); perr == nil {
+			if d, derr := startResponder(DiscoveryPort, tcpPort, h.pin); derr != nil {
+				lg.Printf("discovery: not answering searches on your network (%v)", derr)
+			} else {
+				disco = d
+				lg.Printf("discovery: answering searches on UDP %d, so people on your network need only the password", DiscoveryPort)
+			}
+		}
+	}
 	advertise := cfg.Advertise
 	var undo func()
 	if advertise == "" {
@@ -67,7 +79,7 @@ func Start(cfg Config, lg *log.Logger) (*Server, error) {
 	lg.Printf("chunk %s | streams/session %d | ttl %s | max sessions %d",
 		wire.Human(cfg.Chunk), cfg.Streams, cfg.TTL, cfg.MaxSessions)
 
-	s := &Server{cfg: cfg, hub: h, ln: ln, log: lg, undo: undo, done: make(chan struct{})}
+	s := &Server{cfg: cfg, hub: h, ln: ln, log: lg, undo: undo, disco: disco, done: make(chan struct{})}
 	go h.janitor()
 	go s.accept()
 	return s, nil
@@ -75,12 +87,13 @@ func Start(cfg Config, lg *log.Logger) (*Server, error) {
 
 // Server is a running relay.
 type Server struct {
-	cfg  Config
-	hub  *hub
-	ln   net.Listener
-	log  *log.Logger
-	undo func()
-	done chan struct{}
+	cfg   Config
+	hub   *hub
+	ln    net.Listener
+	log   *log.Logger
+	undo  func()
+	disco net.PacketConn
+	done  chan struct{}
 
 	mu     sync.Mutex
 	closed bool
@@ -115,6 +128,9 @@ func (s *Server) Close() {
 	s.mu.Unlock()
 
 	_ = s.ln.Close()
+	if s.disco != nil {
+		_ = s.disco.Close()
+	}
 	select {
 	case <-s.done:
 	case <-time.After(2 * time.Second):
