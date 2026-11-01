@@ -15,7 +15,7 @@ import (
 )
 
 // Version is the relay's build label, reported at startup and in -v.
-const Version = "1.0.0"
+const Version = "1.0.1"
 
 // Start brings the relay up and returns as soon as it is listening, so an
 // embedding program (STRS.exe) can host it without a second window.

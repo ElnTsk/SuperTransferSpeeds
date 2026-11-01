@@ -227,7 +227,7 @@ func (h *hub) serve(nc net.Conn) {
 	c := wire.Wrap(nc)
 	defer func() {
 		if r := recover(); r != nil {
-			h.log.Printf("panic from %s: %v", c.RemoteAddr(), r)
+			h.log.Printf("panic from %s: %v", maskAddr(c.RemoteAddr()), r)
 		}
 		_ = c.Close()
 	}()
@@ -389,7 +389,7 @@ func (h *hub) handleSender(c *wire.Conn, hello wire.Msg) {
 		_ = c.Send(wire.ErrMsg("rand", err.Error()))
 		return
 	}
-	name := orName(hello.Name, c.RemoteAddr())
+	name := orName(hello.Name, maskAddr(c.RemoteAddr()))
 	s := &session{
 		h:       h,
 		key:     key,
@@ -597,14 +597,14 @@ func (h *hub) handleReceiver(c *wire.Conn, hello wire.Msg) {
 		_ = c.Send(wire.ErrMsg("no_manifest", "the sender has not offered files yet; ask them to finish selecting"))
 		return
 	}
-	name := orName(hello.Name, c.RemoteAddr())
+	name := "your friend"
 	if !s.claim(name) {
 		_ = c.Send(wire.ErrMsg("claimed", "another receiver is already pulling this session: "+s.receiver()))
 		return
 	}
 	s.notifySender(wire.Msg{T: "claimed", Name: name})
 	s.killWorkers() // clear any straggler from a previous attempt
-	h.log.Printf("%s claimed by %s from %s (%d files)", s.id, name, c.RemoteAddr(), len(files))
+	h.log.Printf("%s claimed by %s from %s (%d files)", s.id, name, maskAddr(c.RemoteAddr()), len(files))
 
 	if err := sendManifest(c, s, files, root); err != nil {
 		s.unclaim()
@@ -974,6 +974,23 @@ func short(token string) string {
 		return token
 	}
 	return token[:4]
+}
+
+// maskAddr hides most of a peer address before it reaches a log or a screen:
+// 203.0.113.9:5000 becomes 203.0.x.x, and an IPv6 address keeps two groups.
+func maskAddr(addr string) string {
+	host, _, err := net.SplitHostPort(addr)
+	if err != nil {
+		host = addr
+	}
+	ip := net.ParseIP(host)
+	if ip == nil {
+		return "hidden"
+	}
+	if v4 := ip.To4(); v4 != nil {
+		return fmt.Sprintf("%d.%d.x.x", v4[0], v4[1])
+	}
+	return fmt.Sprintf("%x:%x:x", int(ip[0])<<8|int(ip[1]), int(ip[2])<<8|int(ip[3]))
 }
 
 func orName(v, fallback string) string {

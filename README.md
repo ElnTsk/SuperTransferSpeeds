@@ -21,6 +21,9 @@ nothing else to install or run.
 - **Private:** everything is encrypted. The block also holds a "pin", a
   fingerprint of your PC's certificate, so your friend's copy can tell it is
   really talking to your PC and not someone pretending to be it.
+- **Discreet:** your friend's address and PC name are hidden. Logs and the
+  sender's window show only a masked address like `90.203.x.x` and the name
+  "your friend".
 - **Fast:** many connections at once, and lots of small files are bundled so
   they don't slow things down.
 - **Safe:** every file is checked after it arrives (using a SHA-256 hash, a

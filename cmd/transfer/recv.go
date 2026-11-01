@@ -185,7 +185,7 @@ func cmdReceive(args []string) error {
 
 	say("connecting to relay %s", serverAddr)
 	wantPin, pinAuthoritative := expectedPin(serverAddr, suppliedPin)
-	c, first, gotPin, err := openConn(serverAddr, "receiver", password, hostLabel(), wantPin)
+	c, first, gotPin, err := openConn(serverAddr, "receiver", password, "", wantPin)
 	if err != nil {
 		return err
 	}
@@ -665,7 +665,7 @@ func copyRange(w io.Writer, rd io.ReaderAt, offset, length int64, buf []byte) (i
 
 // runWorker keeps one data lane busy until the queue runs dry.
 func (r *receiver) runWorker() error {
-	c, first, _, err := openConn(r.server, "worker", r.password, hostLabel(), r.pin)
+	c, first, _, err := openConn(r.server, "worker", r.password, "", r.pin)
 	if err != nil {
 		return err
 	}
