@@ -1,0 +1,6 @@
+dist/
+*.syso
+*.exe
+*.log
+*.part
+.strs-state.json
