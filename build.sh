@@ -19,10 +19,12 @@ else
 fi
 
 mkdir -p dist
+# Linux binaries are fully static (no libc), so one file runs on Arch, Ubuntu,
+# Debian and anything else with a 64-bit Intel/AMD kernel, old or new.
 echo "=== relay (linux) ==="
-go build -trimpath -o dist/supertransfer-relay ./cmd/transferserver
+CGO_ENABLED=0 go build -trimpath -ldflags "-s -w" -o dist/supertransfer-relay ./cmd/transferserver
 echo "=== client (linux) ==="
-go build -trimpath -o dist/STRS-linux ./cmd/transfer
+CGO_ENABLED=0 go build -trimpath -ldflags "-s -w" -o dist/STRS-linux ./cmd/transfer
 echo "=== client (windows) ==="
 GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -ldflags "-s -w -X main.defaultServer=127.0.0.1:8443" -o dist/STRS.exe ./cmd/transfer
 

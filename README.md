@@ -1,83 +1,136 @@
 # SuperTransfer (STRS)
 
-SuperTransferSpeeds is a folder-to-folder file transfer tool. You pick files,
-set a password, and a friend pulls them with just that password. There is no
-account, no cloud storage and no upload step: your PC hosts its own relay and
-the files go straight from you to them.
+Send big files and folders straight from your PC to a friend's PC.
+No cloud, no account, no upload site. You pick the files, set a password, and
+your friend types that password to download them.
 
-## Features
+## How it works
 
-- **Self-hosted relay.** Sending starts a relay inside the same program. It
-  asks your router (UPnP) to forward a port and hands your friend the address.
-- **Password handoff.** Your friend runs `STRS`, picks **Receive Files** and
-  types the password. They can also paste the whole handoff block.
-- **Encrypted and pinned.** All traffic is TLS. The relay's certificate
-  fingerprint (pin) is checked, so a swapped relay is refused.
-- **Fast.** 16 parallel lanes by default, chunked transfers, and small files
-  are packed together so thousands of tiny files cost a few round trips.
-- **Verified.** Every chunk and file is checked with SHA-256 before it is
-  accepted, and a receipt is written next to the files.
-- **Resumable.** Interrupted downloads continue where they stopped. If you
-  stop a receive yourself (Ctrl-C or closing the window), the partial files
-  are deleted instead.
-- **Windows and Linux.** A Windows `STRS.exe` (the relay is built in), a
-  Linux client, and an optional standalone Linux relay.
+1. You run STRS and choose **Send Files To A Friend**.
+2. STRS shows you an **address**, a **pin** and a **password**. Send these to
+   your friend.
+3. Your friend runs STRS, chooses **Receive Files**, and types the password.
+4. The files go from your PC to theirs. Keep your window open until it finishes.
 
-## Quick start
+Your PC is the "relay" (the go-between), and STRS starts it for you. There is
+nothing else to install or run.
 
-1. Download `STRS.exe` from the [Releases](../../releases) page. Your friend
-   needs it too.
-2. Run it. Choose **1  Send Files To A Friend**, pick the files, set a
-   password, and send your friend the address, pin and password it shows.
-3. Your friend runs it, chooses **2  Receive Files**, and types the password.
+## What you get
 
-Keep the sender window open while the transfer runs. The session ends when it
-closes. A password can only serve one session at a time.
+- **Private:** everything is encrypted, and your friend's copy checks it is
+  really talking to your PC.
+- **Fast:** many connections at once, and lots of small files are bundled so
+  they don't slow things down.
+- **Safe:** every file is checked after it arrives, so a broken file is caught.
+- **Resumable:** if the connection drops, the download carries on where it
+  stopped.
+- **Tidy:** if you stop a download yourself (Ctrl-C or closing the window), the
+  half-finished files are deleted.
 
-## Command line
+## Download
 
-```
-STRS send     [flags]   set a password, pick files, serve them
-STRS receive  [flags]   type the password, pick a drop folder, pull them
-STRS scan     [flags]   show what send would offer
-STRS info               show resolved server, pin cache and paths
-```
+Get the files from the [Releases page](../../releases).
 
-Common flags: `-server host:port`, `-streams N`, `-chunk MB`.
-Send: `-dir PATH`, `-all`, `-flat`, `-exclude GLOB,GLOB`, `-pack MB`.
-Receive: `-password PASS`, `-from FILE`, `-out PATH`, `-all`, `-fresh`.
-Run `STRS` with no arguments for the menu.
+| You are on | Download |
+|---|---|
+| Windows | `STRS.exe` |
+| Linux (Arch, Ubuntu, Debian and others) | `STRS-linux` |
 
-## Standalone relay
+Your friend needs the same program on their computer.
 
-On Windows the relay is built into `STRS.exe`, so there is nothing else to
-start. `supertransfer-relay` (Linux) runs the relay on its own, for a server
-that only hosts:
+## Windows
 
-```
-supertransfer-relay -listen :8443 -advertise your.host:8443
+1. Download `STRS.exe` and double-click it.
+2. Choose **1** to send or **2** to receive.
+
+If Windows asks about the firewall, allow it. That lets your friend connect.
+
+## Linux (Arch, Ubuntu, Debian, and others)
+
+`STRS-linux` is a single file with no dependencies. You do not need to install
+any packages. It works on 64-bit Intel/AMD Linux, including Arch, Ubuntu,
+Debian, Mint, Fedora and others.
+
+```bash
+chmod +x STRS-linux
+./STRS-linux
 ```
 
-Useful flags: `-streams`, `-ttl`, `-max-sessions`, `-public-port`, `-no-upnp`,
-`-no-firewall`, `-log FILE`.
+To use it from anywhere as `STRS`:
 
-## Building
+```bash
+sudo install -m 755 STRS-linux /usr/local/bin/STRS
+STRS
+```
 
-You need Go. From the repository root:
+If your friend is outside your home network, your firewall must allow the
+port STRS uses (8443). Only do this if you have a firewall turned on:
+
+| Distro | Command |
+|---|---|
+| Ubuntu / Debian (ufw) | `sudo ufw allow 8443/tcp` |
+| Arch / Fedora (firewalld) | `sudo firewall-cmd --add-port=8443/tcp` |
+
+## Sending to someone outside your home
+
+STRS asks your router to open a port automatically (this is called UPnP). If
+your router has UPnP turned off, open **TCP port 8443** to your PC yourself in
+the router settings (this is called port forwarding). Without it, only people
+on your own network can connect.
+
+## Using it from a terminal
+
+Run `STRS` with no arguments for the menu, or use commands:
 
 ```
+STRS send     set a password, pick files, share them
+STRS receive  type the password, pick a folder, download
+STRS scan     show what send would share, without sharing it
+STRS info     show settings and paths
+```
+
+Handy options:
+
+- `-dir PATH` folder to send (send)
+- `-all` take everything without asking (send and receive)
+- `-password PASS` the password your friend gave you (receive)
+- `-out PATH` where to save the files (receive)
+- `-fresh` ignore a half-finished download and start over (receive)
+- `-streams N` number of connections (default 16)
+
+## Running the relay on its own (optional)
+
+Most people never need this. `supertransfer-relay` is for a Linux server that
+should only host transfers and not send or receive anything itself. It is also
+a single static file that runs on any 64-bit Linux.
+
+```bash
+chmod +x supertransfer-relay
+./supertransfer-relay -listen :8443 -advertise your.server.address:8443
+```
+
+Options: `-streams`, `-ttl`, `-max-sessions`, `-public-port`, `-no-upnp`,
+`-log FILE`.
+
+## Build it yourself
+
+You need [Go](https://go.dev/dl/) installed.
+
+```bash
+git clone https://github.com/Slxcky-1/SuperTransferSpeeds.git
+cd SuperTransferSpeeds
 ./build.sh
 ```
 
-Binaries are written to `dist/`. If [`rsrc`](https://github.com/akavel/rsrc)
-is installed, the Windows build also embeds the icon and manifest.
+The programs are written to the `dist/` folder.
 
-## Notes
+## Good to know
 
-- Your router must allow UPnP, or you must forward the TCP port yourself.
-  Without a forwarded port only people on your own network can connect.
-- Relay certificate and settings are kept in your user config folder, and a
-  small config file in your temp folder under `STRS`.
+- A password can only be used for one transfer at a time. If you see "already
+  serving a transfer", close the other STRS window first.
+- Passwords last 24 hours.
+- Settings are saved in your user config folder, and a small config file in
+  your temp folder under `STRS`.
 
 ## License
 
