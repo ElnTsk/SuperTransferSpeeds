@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	version  = "1.0.1"
+	version  = "1.1.0"
 	appName  = "STRS"
 	fullName = "SuperTransferSpeeds"
 )
@@ -540,7 +540,7 @@ func openConn(server, role, token, name, pin string) (*wire.Conn, wire.Msg, stri
 	if err != nil {
 		return nil, wire.Msg{}, gotPin, err
 	}
-	if err := c.Send(wire.Msg{T: "hello", V: wire.ProtoV, Role: role, Token: token, Name: name}); err != nil {
+	if err := c.Send(wire.Msg{T: "hello", V: wire.ProtoV, Role: role, Token: wireToken(token), Name: name}); err != nil {
 		_ = c.Close()
 		return nil, wire.Msg{}, gotPin, err
 	}

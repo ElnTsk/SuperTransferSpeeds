@@ -6,6 +6,8 @@ export GOFLAGS=-buildvcs=false
 
 echo "=== vet ==="
 go vet ./...
+echo "=== test ==="
+go test ./...
 
 # Windows icon and manifest: rsrc turns them into a resource object that the
 # linker picks up because of the _windows_amd64 suffix in its name.

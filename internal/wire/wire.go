@@ -20,7 +20,7 @@ import (
 
 const (
 	// ProtoV is the wire version both sides must agree on.
-	ProtoV = 2
+	ProtoV = 3
 
 	// MaxMsg bounds one control frame; manifests are split to stay inside it.
 	MaxMsgLen = 4 << 20
@@ -122,6 +122,7 @@ type File struct {
 	Chunks  int64    `json:"chunks"`
 	Class   string   `json:"class"`
 	Members []Member `json:"members,omitempty"`
+	Nonce   string   `json:"nonce,omitempty"`
 }
 
 // IsPack reports whether this entry carries several files in one stream.
@@ -156,6 +157,7 @@ type Msg struct {
 	Root     string   `json:"root,omitempty"`
 	Files    []File   `json:"files,omitempty"`
 	Digests  []string `json:"digests,omitempty"`
+	Mac      string   `json:"mac,omitempty"`
 	Done     bool     `json:"done,omitempty"`
 }
 

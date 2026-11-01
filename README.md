@@ -18,7 +18,8 @@ nothing else to install or run.
 
 ## What you get
 
-- **Private:** everything is encrypted. The block also holds a "pin", a
+- **Private:** connections are encrypted, and so are the files themselves
+  (see "How your files are protected" below). The block also holds a "pin", a
   fingerprint of your PC's certificate, so your friend's copy can tell it is
   really talking to your PC and not someone pretending to be it.
 - **Discreet:** your friend's address and PC name are hidden. Logs and the
@@ -132,7 +133,30 @@ cd SuperTransferSpeeds
 
 The programs are written to the `dist/` folder.
 
+## How your files are protected
+
+Files are encrypted from your PC to your friend's PC, so even the relay in the
+middle cannot read them or change them without being caught. This matters most
+if you run the relay on a server you don't fully trust. When you send from
+your own PC, the relay is your PC.
+
+- **The password never leaves your PC.** The relay only ever gets a one-way
+  code worked out from it, which is useless for decrypting anything.
+- **Files are locked with AES-256**, using a different key for every file.
+- **Changes are caught.** Each chunk is signed with a key only you and your
+  friend can make, so a relay can't swap in data of its own.
+
+What is **not** hidden: the relay can still see file names, file sizes, when
+you transfer and your friend's address (masked in the logs). It needs these to
+do its job.
+
+The protection is only as strong as the password. Anyone who can guess it can
+unlock the files, so use a long one, such as three or four random words.
+
 ## Good to know
+
+- Version 1.1 and newer cannot talk to older versions. Both you and your
+  friend need the same download.
 
 - A password can only be used for one transfer at a time. If you see "already
   serving a transfer", close the other STRS window first.

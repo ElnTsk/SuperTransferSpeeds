@@ -823,7 +823,7 @@ func (h *hub) serveChunk(s *session, c *wire.Conn, req wire.Msg) error {
 	if _, err := hex.DecodeString(end.SHA256); err != nil {
 		return fmt.Errorf("lane_lost: sender digest is not hex: %w", err)
 	}
-	if err := c.Send(wire.Msg{T: "end", File: req.File, Index: req.Index, SHA256: end.SHA256, Digests: end.Digests, Bytes: n}); err != nil {
+	if err := c.Send(wire.Msg{T: "end", File: req.File, Index: req.Index, SHA256: end.SHA256, Digests: end.Digests, Mac: end.Mac, Bytes: n}); err != nil {
 		return fmt.Errorf("receiver_gone: receiver vanished before the digest: %w", err)
 	}
 

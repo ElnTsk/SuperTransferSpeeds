@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/cipher"
 	"crypto/sha256"
 	"encoding/hex"
 	"flag"
@@ -24,8 +25,10 @@ type sendMember struct {
 // sendSource is what a manifest name resolves to: one file, or a run of small
 // files concatenated into a single stream.
 type sendSource struct {
+	name    string
 	abs     string
 	members []sendMember
+	fc      *fileCrypto
 }
 
 // sender holds the state of one `transfer send` run.
@@ -166,10 +169,9 @@ func cmdSend(args []string) error {
 		return err
 	}
 
-	code := reply.Token
-	if code == "" {
-		code = password
-	}
+	// The relay echoes back the derived token it was given. What friends
+	// type is the password itself, so that is the code.
+	code := password
 	expires := time.Unix(reply.Expires, 0)
 	laneCap := reply.Streams
 	if laneCap < 1 || laneCap > wantStreams {
@@ -224,11 +226,14 @@ func cmdSend(args []string) error {
 	// Small files ride together; the manifest the friend sees is the packed
 	// view, and each stream resolves back to real paths here.
 	manifest := packSmallFiles(picked, wantPack)
+	for i := range manifest {
+		manifest[i].Nonce = newNonce()
+	}
 	var total int64
 	packs := 0
 	for _, f := range manifest {
 		total += f.Size
-		src := &sendSource{}
+		src := &sendSource{name: f.Name}
 		if len(f.Members) > 0 {
 			packs++
 			for _, m := range f.Members {
@@ -245,6 +250,11 @@ func cmdSend(args []string) error {
 			}
 			src.abs = abs
 		}
+		fc, ferr := fileCryptoFor(password, f.Nonce)
+		if ferr != nil {
+			return ferr
+		}
+		src.fc = fc
 		s.sources[f.Name] = src
 	}
 	s.total = total
@@ -451,18 +461,18 @@ func (s *sender) ship(l *laneIO, work wire.Msg) error {
 	if len(src.members) > 0 {
 		return s.shipPack(l, src, work)
 	}
-	return s.shipRange(l, src.abs, work)
+	return s.shipRange(l, src, work)
 }
 
 // shipRange reads one byte range, hashes it as it goes, and writes the digest
 // after the payload so no chunk has to be held in memory.
-func (s *sender) shipRange(l *laneIO, abs string, work wire.Msg) error {
-	digest, err := s.streamRange(l, abs, work.Offset, work.Length, work.File, work.Index)
+func (s *sender) shipRange(l *laneIO, src *sendSource, work wire.Msg) error {
+	digest, err := s.streamRange(l, src.abs, work.Offset, work.Length, work.File, work.Index, src.fc)
 	if err != nil {
 		return err
 	}
 	s.recordDigest(work.File, work.Index, digest)
-	return l.c.Send(wire.Msg{T: "end", SHA256: digest, Bytes: work.Length})
+	return l.c.Send(wire.Msg{T: "end", SHA256: digest, Mac: src.fc.mac(src.name, work.Index, work.Length, digest), Bytes: work.Length})
 }
 
 // shipPack streams a run of small files as one payload. A pack is always one
@@ -480,11 +490,12 @@ func (s *sender) shipPack(l *laneIO, src *sendSource, work wire.Msg) error {
 	}
 
 	packHash := sha256.New()
+	enc := src.fc.stream(0)
 	digests := make([]string, 0, len(src.members))
 	var written int64
 	for _, m := range src.members {
 		h := sha256.New()
-		if err := s.copyFileInto(l, m.abs, m.Length, h, packHash); err != nil {
+		if err := s.copyFileInto(l, m.abs, m.Length, enc, h, packHash); err != nil {
 			return err
 		}
 		digests = append(digests, wire.HexDigest(h.Sum(nil)))
@@ -498,12 +509,13 @@ func (s *sender) shipPack(l *laneIO, src *sendSource, work wire.Msg) error {
 		return fmt.Errorf("flush_failed: %w", err)
 	}
 	atomic.AddInt64(&s.chunks, 1)
-	return l.c.Send(wire.Msg{T: "end", SHA256: wire.HexDigest(packHash.Sum(nil)), Digests: digests, Bytes: written})
+	packDigest := wire.HexDigest(packHash.Sum(nil))
+	return l.c.Send(wire.Msg{T: "end", SHA256: packDigest, Digests: digests, Mac: src.fc.mac(src.name, 0, total, packDigest), Bytes: written})
 }
 
 // copyFileInto streams one whole file into the lane and any extra writers,
 // which is how the pack digest and every member digest come from one read.
-func (s *sender) copyFileInto(l *laneIO, abs string, length int64, sinks ...io.Writer) error {
+func (s *sender) copyFileInto(l *laneIO, abs string, length int64, enc cipher.Stream, sinks ...io.Writer) error {
 	f, err := os.Open(abs)
 	if err != nil {
 		return fmt.Errorf("open_failed: %w", err)
@@ -527,11 +539,13 @@ func (s *sender) copyFileInto(l *laneIO, abs string, length int64, sinks ...io.W
 		}
 		n, rerr := f.ReadAt(l.buf[:want], done)
 		if n > 0 {
-			if _, werr := l.c.Buf().Write(l.buf[:n]); werr != nil {
-				return fmt.Errorf("write_failed: %w", werr)
-			}
+			// hash the plaintext, then encrypt in place and send
 			for _, w := range sinks {
 				_, _ = w.Write(l.buf[:n])
+			}
+			enc.XORKeyStream(l.buf[:n], l.buf[:n])
+			if _, werr := l.c.Buf().Write(l.buf[:n]); werr != nil {
+				return fmt.Errorf("write_failed: %w", werr)
 			}
 			done += int64(n)
 			atomic.AddInt64(&s.served, int64(n))
@@ -550,7 +564,10 @@ func (s *sender) copyFileInto(l *laneIO, abs string, length int64, sinks ...io.W
 }
 
 // streamRange is the plain-file path: one open, one read loop, one hash.
-func (s *sender) streamRange(l *laneIO, abs string, offset, length int64, name string, index int64) (string, error) {
+func (s *sender) streamRange(l *laneIO, abs string, offset, length int64, name string, index int64, fc *fileCrypto) (string, error) {
+	if offset%16 != 0 {
+		return "", fmt.Errorf("bad_request: chunk offset %d is not 16-byte aligned", offset)
+	}
 	f, err := os.Open(abs)
 	if err != nil {
 		return "", fmt.Errorf("open_failed: %w", err)
@@ -569,6 +586,7 @@ func (s *sender) streamRange(l *laneIO, abs string, offset, length int64, name s
 		return "", err
 	}
 	h := sha256.New()
+	enc := fc.stream(offset)
 	var done int64
 	for done < length {
 		want := int64(len(l.buf))
@@ -577,10 +595,11 @@ func (s *sender) streamRange(l *laneIO, abs string, offset, length int64, name s
 		}
 		n, rerr := f.ReadAt(l.buf[:want], offset+done)
 		if n > 0 {
+			_, _ = h.Write(l.buf[:n])
+			enc.XORKeyStream(l.buf[:n], l.buf[:n])
 			if _, werr := l.c.Buf().Write(l.buf[:n]); werr != nil {
 				return "", fmt.Errorf("write_failed: %w", werr)
 			}
-			_, _ = h.Write(l.buf[:n])
 			done += int64(n)
 			atomic.AddInt64(&s.served, int64(n))
 		}

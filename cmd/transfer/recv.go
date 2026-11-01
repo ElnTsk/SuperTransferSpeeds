@@ -785,6 +785,15 @@ func (r *receiver) pullChunk(c *wire.Conn, job chunkJob) error {
 	if !strings.EqualFold(digest, end.SHA256) {
 		return fmt.Errorf("digest_mismatch: %s chunk %d is %s here, sender says %s", f.Name, job.index, digest, end.SHA256)
 	}
+	// The digest above only proves the bytes survived the trip. The mac proves
+	// the sender (who knows the password) vouched for exactly this chunk.
+	fc, ferr := fileCryptoFor(r.password, f.Nonce)
+	if ferr != nil {
+		return fmt.Errorf("local: %w", ferr)
+	}
+	if !fc.verify(f.Name, job.index, hdr.Length, digest, end.Mac) {
+		return fmt.Errorf("integrity_failed: %s chunk %d did not authenticate - the password is wrong or the data was changed on the way", f.Name, job.index)
+	}
 	if len(f.Members) > 0 {
 		if len(end.Digests) != len(f.Members) {
 			return fmt.Errorf("digest_mismatch: pack %s sent %d member hashes for %d files", f.Name, len(end.Digests), len(f.Members))
@@ -829,8 +838,15 @@ func (r *receiver) readPlainChunk(c *wire.Conn, s stream, offset, length int64) 
 	if err != nil {
 		return "", fmt.Errorf("local: %w", err)
 	}
+	fc, err := fileCryptoFor(r.password, f.Nonce)
+	if err != nil {
+		return "", fmt.Errorf("local: %w", err)
+	}
+	if offset%16 != 0 {
+		return "", fmt.Errorf("bad_frame: chunk offset %d is not 16-byte aligned", offset)
+	}
 	h := sha256.New()
-	dst := io.MultiWriter(&offsetWriter{f: out, off: offset}, h)
+	dst := &decryptWriter{w: io.MultiWriter(&offsetWriter{f: out, off: offset}, h), s: fc.stream(offset)}
 	n, err := io.CopyBuffer(dst, io.LimitReader(c.Raw(), length), make([]byte, copyBlock))
 	if err != nil {
 		return "", fmt.Errorf("lane_lost: payload broke: %w", err)
@@ -852,6 +868,11 @@ func (r *receiver) readPack(c *wire.Conn, s stream, length int64) (string, []str
 	for _, n := range s.wanted {
 		wanted[n] = true
 	}
+	fc, err := fileCryptoFor(r.password, s.file.Nonce)
+	if err != nil {
+		return "", nil, fmt.Errorf("local: %w", err)
+	}
+	dec := fc.stream(0)
 	buf := make([]byte, copyBlock)
 	var consumed int64
 
@@ -878,6 +899,7 @@ func (r *receiver) readPack(c *wire.Conn, s stream, length int64) (string, []str
 			}
 			n, err := io.ReadFull(io.LimitReader(c.Raw(), want), buf[:want])
 			if n > 0 {
+				dec.XORKeyStream(buf[:n], buf[:n])
 				for _, w := range sinks {
 					if _, werr := w.Write(buf[:n]); werr != nil {
 						return "", nil, fmt.Errorf("local: write failed for %s: %w", m.Name, werr)
