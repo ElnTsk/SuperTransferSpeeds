@@ -61,6 +61,7 @@ Get the files from the [Releases page](../../releases).
 |---|---|
 | Windows | `STRS.exe` |
 | Linux (Arch, Ubuntu, Debian and others) | `STRS-linux` |
+| Raspberry Pi 2 or newer, 32-bit Raspberry Pi OS | `STRS-linux-arm` |
 
 Your friend needs the same program on their computer.
 
@@ -101,6 +102,20 @@ port STRS uses (8443). Only do this if you have a firewall turned on:
 To let people on your own network find you automatically (option 3), also
 allow the search port, UDP 48443: `sudo ufw allow 48443/udp` or
 `sudo firewall-cmd --add-port=48443/udp`.
+
+## Raspberry Pi
+
+`STRS-linux-arm` is for the 32-bit Raspberry Pi OS. It is one file with no
+dependencies. To check which kind you have, run `uname -m`:
+
+- `armv7l` or `armv6l`: use `STRS-linux-arm`.
+- `aarch64` (64-bit Raspberry Pi OS): there is no download for this yet. Build
+  it yourself with `GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build ./cmd/transfer`.
+
+```bash
+chmod +x STRS-linux-arm
+./STRS-linux-arm
+```
 
 ## Sending to someone outside your home
 

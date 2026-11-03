@@ -27,8 +27,10 @@ echo "=== relay (linux) ==="
 CGO_ENABLED=0 go build -trimpath -ldflags "-s -w" -o dist/supertransfer-relay ./cmd/transferserver
 echo "=== client (linux) ==="
 CGO_ENABLED=0 go build -trimpath -ldflags "-s -w" -o dist/STRS-linux ./cmd/transfer
+echo "=== client (linux, 32-bit ARM: Raspberry Pi 2 and newer on 32-bit Raspberry Pi OS) ==="
+GOOS=linux GOARCH=arm GOARM=6 CGO_ENABLED=0 go build -trimpath -ldflags "-s -w" -o dist/STRS-linux-arm ./cmd/transfer
 echo "=== client (windows) ==="
 GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -ldflags "-s -w -X main.defaultServer=127.0.0.1:8443" -o dist/STRS.exe ./cmd/transfer
 
-( cd dist && sha256sum STRS.exe STRS-linux supertransfer-relay > SHA256SUMS )
+( cd dist && sha256sum STRS.exe STRS-linux STRS-linux-arm supertransfer-relay > SHA256SUMS )
 echo "done: dist/"
